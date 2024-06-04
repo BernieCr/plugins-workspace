@@ -64,7 +64,7 @@ type Result<T> = std::result::Result<T, Error>;
 /// Resolves the App's **file path** from the `AppHandle` context
 /// object
 fn app_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
-    app.path().app_config_dir().expect("No App path was found!")
+    app.path().document_dir().expect("No App path was found!")
 }
 
 #[cfg(feature = "sqlite")]
