@@ -38,6 +38,15 @@ impl<R: Runtime> Biometric<R> {
         #[cfg(mobile)] {
             self.0.run_mobile_plugin("status", ()).map_err(Into::into)
         }
+        #[cfg(not(mobile))]
+        {
+            Ok(Status {
+                is_available: false,
+                biometry_type: BiometryType::None,
+                error: None,
+                error_code: None,
+            })
+        }
     }
 
     pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
