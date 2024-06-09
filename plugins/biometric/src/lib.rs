@@ -55,6 +55,10 @@ impl<R: Runtime> Biometric<R> {
 	            .run_mobile_plugin("authenticate", AuthenticatePayload { reason, options })
 	            .map_err(Into::into)
         }
+        #[cfg(not(mobile))]
+        {
+            Ok(())
+        }
     }
 }
 
