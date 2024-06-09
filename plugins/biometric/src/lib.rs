@@ -28,7 +28,7 @@ tauri::ios_plugin_binding!(init_plugin_biometric);
 pub struct Biometric<R: Runtime>(PluginHandle<R>);
 
 #[cfg(not(mobile))]
-pub struct Biometric();
+pub struct Biometric<R: 'static>();
 
 #[cfg(mobile)]
 impl<R: Runtime> Biometric<R> {
@@ -44,7 +44,7 @@ impl<R: Runtime> Biometric<R> {
 }
 
 #[cfg(not(mobile))]
-impl Biometric<> {
+impl<R: 'static> Biometric<R> {
     pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
        Ok(())
     }
