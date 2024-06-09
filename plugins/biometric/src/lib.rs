@@ -24,42 +24,37 @@ const PLUGIN_IDENTIFIER: &str = "app.tauri.biometric";
 tauri::ios_plugin_binding!(init_plugin_biometric);
 
 /// Access to the biometric APIs.
-pub struct Biometric<R: Runtime>(PluginHandle<R>);
+#[cfg(mobile)] {
+	pub struct Biometric<R: Runtime>(PluginHandle<R>);
+
+	impl<R: Runtime> Biometric<R> {
+        pub fn status(&self) -> crate::Result<Status> {
+            self.0.run_mobile_plugin("status", ()).map_err(Into::into)
+        }
+
+        pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
+            self.0
+	            .run_mobile_plugin("authenticate", AuthenticatePayload { reason, options })
+	            .map_err(Into::into)
+        }
+    }
+}
+
+#[cfg(not(mobile))] {
+	pub struct Biometric();
+
+	impl Biometric<> {
+        pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
+           Ok(())
+        }
+    }
+}
 
 #[derive(Serialize)]
 struct AuthenticatePayload {
     reason: String,
     #[serde(flatten)]
     options: AuthOptions,
-}
-
-impl<R: Runtime> Biometric<R> {
-    pub fn status(&self) -> crate::Result<Status> {
-        #[cfg(mobile)] {
-            self.0.run_mobile_plugin("status", ()).map_err(Into::into)
-        }
-        #[cfg(not(mobile))]
-        {
-            Ok(Status {
-                is_available: false,
-                biometry_type: BiometryType::None,
-                error: None,
-                error_code: None,
-            })
-        }
-    }
-
-    pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
-        #[cfg(mobile)] {
-	        self.0
-	            .run_mobile_plugin("authenticate", AuthenticatePayload { reason, options })
-	            .map_err(Into::into)
-        }
-        #[cfg(not(mobile))]
-        {
-            Ok(())
-        }
-    }
 }
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`], [`tauri::WebviewWindow`], [`tauri::Webview`] and [`tauri::Window`] to access the biometric APIs.
@@ -86,7 +81,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             }
             #[cfg(not(mobile))]
             {
-                app.manage(Biometric(None::<PluginHandle<R>>));
+                app.manage(Biometric());
             }
             Ok(())
         })
