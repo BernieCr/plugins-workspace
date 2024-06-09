@@ -86,7 +86,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             }
             #[cfg(not(mobile))]
             {
-                app.manage(Biometric(None as Runtime));
+                app.manage(Biometric(None as dyn Runtime));
             }
             Ok(())
         })
