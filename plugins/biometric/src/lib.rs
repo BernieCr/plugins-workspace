@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: MIT
 
-// #![cfg(mobile)]
-
 use serde::Serialize;
 use tauri::{
     plugin::{Builder, PluginHandle, TauriPlugin},
@@ -35,11 +33,8 @@ struct AuthenticatePayload {
 
 impl<R: Runtime> Biometric<R> {
     pub fn status(&self) -> crate::Result<Status> {
-        #[cfg(mobile)]
-        {
-            self.0.as_ref().unwrap().run_mobile_plugin("status", ()).map_err(Into::into)
-        }
-        #[cfg(not(mobile))]
+        self.0.as_ref().unwrap().run_mobile_plugin("status", ()).map_err(Into::into)
+      /*  #[cfg(desktop)]
         {
              Ok(Status {
                 is_available: false,
@@ -47,20 +42,19 @@ impl<R: Runtime> Biometric<R> {
                 error: None,
                 error_code: None,
             })
-        }
+        } */
     }
 
+	#[cfg(mobile)]
     pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
-        #[cfg(mobile)]
-        {
-            self.0.as_ref().unwrap()
-                .run_mobile_plugin("authenticate", AuthenticatePayload { reason, options })
-                .map_err(Into::into)
-        }
-        #[cfg(not(mobile))]
-        {
-            Ok(())
-        }
+        self.0.as_ref().unwrap()
+            .run_mobile_plugin("authenticate", AuthenticatePayload { reason, options })
+            .map_err(Into::into)
+    }
+
+    #[cfg(desktop)]
+    pub fn authenticate(&self, reason: String, options: AuthOptions) -> crate::Result<()> {
+        Ok(())
     }
 }
 
@@ -83,8 +77,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             let handle = Some(api.register_android_plugin(PLUGIN_IDENTIFIER, "BiometricPlugin")?);
             #[cfg(target_os = "ios")]
             let handle = Some(api.register_ios_plugin(init_plugin_biometric)?);
-            #[cfg(not(mobile))]
+            #[cfg(desktop)]
             let handle = None as Option<PluginHandle<R>>;
+
             app.manage(Biometric(handle));
             Ok(())
         })
