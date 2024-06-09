@@ -84,7 +84,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             #[cfg(target_os = "ios")]
             let handle = Some(api.register_ios_plugin(init_plugin_biometric)?);
             #[cfg(not(mobile))]
-            let handle = None as PluginHandle<R>;
+            let handle = None as Option<PluginHandle<R>>;
             app.manage(Biometric(handle));
             Ok(())
         })
