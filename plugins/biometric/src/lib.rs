@@ -27,7 +27,7 @@ tauri::ios_plugin_binding!(init_plugin_biometric);
 #[cfg(mobile)]
 pub struct Biometric<R: Runtime>(PluginHandle<R>);
 
-[cfg(not(mobile))]
+#[cfg(not(mobile))]
 pub struct Biometric();
 
 #[cfg(mobile)]
