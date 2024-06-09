@@ -32,6 +32,7 @@ struct AuthenticatePayload {
 }
 
 impl<R: Runtime> Biometric<R> {
+	#[cfg(mobile)]
     pub fn status(&self) -> crate::Result<Status> {
         self.0.as_ref().unwrap().run_mobile_plugin("status", ()).map_err(Into::into)
       /*  #[cfg(desktop)]
