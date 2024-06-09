@@ -77,10 +77,11 @@ impl<R: Runtime, T: Manager<R>> crate::BiometricExt<R> for T {
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("biometric")
         .setup(|app, api| {
+            let handle
             #[cfg(target_os = "android")]
-            let handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "BiometricPlugin")?;
+            handle = api.register_android_plugin(PLUGIN_IDENTIFIER, "BiometricPlugin")?;
             #[cfg(target_os = "ios")]
-            let handle = api.register_ios_plugin(init_plugin_biometric)?;
+            handle = api.register_ios_plugin(init_plugin_biometric)?;
             app.manage(Biometric(handle));
             Ok(())
         })
