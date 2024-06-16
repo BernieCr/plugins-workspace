@@ -60,11 +60,15 @@ impl Serialize for Error {
 
 type Result<T> = std::result::Result<T, Error>;
 
-#[cfg(feature = "sqlite")]
 /// Resolves the App's **file path** from the `AppHandle` context
 /// object
+#[cfg(all(feature = "sqlite", mobile))]
 fn app_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
     app.path().document_dir().expect("No App path was found!")
+}
+#[cfg(all(feature = "sqlite", desktop))]
+fn app_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+    app.path().app_config_dir().expect("No App path was found!")
 }
 
 #[cfg(feature = "sqlite")]
