@@ -66,7 +66,13 @@ type Result<T> = std::result::Result<T, Error>;
 fn app_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
     app.path().document_dir().expect("No App path was found!")
 }
-#[cfg(all(feature = "sqlite", desktop))]
+#[cfg(all(feature = "sqlite", desktop, debug_assertions))]
+fn app_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+    let mut path = app.path().app_config_dir().expect("No App path was found!");
+    path.push("_dev");
+    path
+}
+#[cfg(all(feature = "sqlite", desktop, not(debug_assertions)))]
 fn app_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
     app.path().app_config_dir().expect("No App path was found!")
 }
