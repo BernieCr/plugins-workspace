@@ -67,17 +67,17 @@ pub enum DbPool {
 /// Resolves the App's **file path** from the `AppHandle` context
 /// object
 #[cfg(all(feature = "sqlite", mobile))]
-fn db_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+fn db_path<R: Runtime>(app: &AppHandle<R>) -> std::path::PathBuf {
     app.path().document_dir().expect("No App path was found!")
 }
 #[cfg(all(feature = "sqlite", desktop, debug_assertions))]
-fn db_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+fn db_path<R: Runtime>(app: &AppHandle<R>) -> std::path::PathBuf {
     let mut path = app.path().app_config_dir().expect("No App path was found!");
     path.push("_dev");
     path
 }
 #[cfg(all(feature = "sqlite", desktop, not(debug_assertions)))]
-fn db_path<R: Runtime>(app: &AppHandle<R>) -> PathBuf {
+fn db_path<R: Runtime>(app: &AppHandle<R>) -> std::path::PathBuf {
     app.path().app_config_dir().expect("No App path was found!")
 }
 
@@ -94,7 +94,7 @@ impl DbPool {
         {
             #[cfg(feature = "sqlite")]
             "sqlite" => {
-                let app_path = db_path(&_app)
+                let app_path = db_path(&_app);
 
                 create_dir_all(&app_path).expect("Couldn't create app config dir");
 
