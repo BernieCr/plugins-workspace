@@ -24,14 +24,16 @@ enum FsScopeEntry {
     },
 }
 
-// Ensure scope entry is kept up to date
-impl From<FsScopeEntry> for scope::EntryRaw {
-    fn from(value: FsScopeEntry) -> Self {
-        match value {
-            FsScopeEntry::Value(path) => scope::EntryRaw::Value(path),
-            FsScopeEntry::Object { path } => scope::EntryRaw::Object { path },
-        }
-    }
+// Ensure `FsScopeEntry` and `scope::EntryRaw` is kept in sync
+fn _f() {
+    match scope::EntryRaw::Value(PathBuf::new()) {
+        scope::EntryRaw::Value(path) => FsScopeEntry::Value(path),
+        scope::EntryRaw::Object { path } => FsScopeEntry::Object { path },
+    };
+    match FsScopeEntry::Value(PathBuf::new()) {
+        FsScopeEntry::Value(path) => scope::EntryRaw::Value(path),
+        FsScopeEntry::Object { path } => scope::EntryRaw::Object { path },
+    };
 }
 
 const BASE_DIR_VARS: &[&str] = &[
@@ -52,7 +54,6 @@ const BASE_DIR_VARS: &[&str] = &[
     "TEMPLATE",
     "VIDEO",
     "RESOURCE",
-    "APP",
     "LOG",
     "TEMP",
     "APPCONFIG",
@@ -109,15 +110,19 @@ fn main() {
 
 [[permission]]
 identifier = "scope-{lower}-recursive"
-description = "This scope recursive access to the complete `${upper}` folder, including sub directories and files."
+description = "This scope permits recursive access to the complete `${upper}` folder, including sub directories and files."
 
+[[permission.scope.allow]]
+path = "${upper}"
 [[permission.scope.allow]]
 path = "${upper}/**"
 
 [[permission]]
 identifier = "scope-{lower}"
-description = "This scope permits access to all files and list content of top level directories in the `${upper}`folder."
+description = "This scope permits access to all files and list content of top level directories in the `${upper}` folder."
 
+[[permission.scope.allow]]
+path = "${upper}"
 [[permission.scope.allow]]
 path = "${upper}/*"
 
@@ -126,7 +131,7 @@ identifier = "scope-{lower}-index"
 description = "This scope permits to list all files and folders in the `${upper}`folder."
 
 [[permission.scope.allow]]
-path = "${upper}/"
+path = "${upper}"
 
 # Sets Section
 # This section combines the scope elements with enablement of commands
@@ -190,5 +195,6 @@ permissions = [
     tauri_plugin::Builder::new(COMMANDS)
         .global_api_script_path("./api-iife.js")
         .global_scope_schema(schemars::schema_for!(FsScopeEntry))
+        .android_path("android")
         .build();
 }

@@ -11,20 +11,20 @@
     html_favicon_url = "https://github.com/tauri-apps/tauri/raw/dev/app-icon.png"
 )]
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tauri::{
     plugin::{Builder, TauriPlugin},
     Manager, Runtime,
 };
 
 use std::{
-    fs,
     path::{Path, PathBuf},
     sync::mpsc::sync_channel,
 };
 
 pub use models::*;
 
+pub use tauri_plugin_fs::FilePath;
 #[cfg(desktop)]
 mod desktop;
 #[cfg(mobile)]
@@ -40,6 +40,11 @@ pub use error::{Error, Result};
 use desktop::*;
 #[cfg(mobile)]
 use mobile::*;
+
+pub(crate) const OK: &str = "Ok";
+pub(crate) const CANCEL: &str = "Cancel";
+pub(crate) const YES: &str = "Yes";
+pub(crate) const NO: &str = "No";
 
 macro_rules! blocking_fn {
     ($self:ident, $fn:ident) => {{
@@ -64,6 +69,85 @@ impl<R: Runtime, T: Manager<R>> crate::DialogExt<R> for T {
 }
 
 impl<R: Runtime> Dialog<R> {
+    /// Create a new messaging dialog builder.
+    /// The dialog can optionally ask the user for confirmation or include an OK button.
+    ///
+    /// # Examples
+    ///
+    /// - Message dialog:
+    ///
+    /// ```
+    /// use tauri_plugin_dialog::DialogExt;
+    ///
+    /// tauri::Builder::default()
+    ///   .setup(|app| {
+    ///     app
+    ///       .dialog()
+    ///       .message("Tauri is Awesome!")
+    ///       .show(|_| {
+    ///         println!("dialog closed");
+    ///       });
+    ///     Ok(())
+    ///   });
+    /// ```
+    ///
+    /// - Ask dialog:
+    ///
+    /// ```
+    /// use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+    ///
+    /// tauri::Builder::default()
+    ///   .setup(|app| {
+    ///     app.dialog()
+    ///       .message("Are you sure?")
+    ///       .buttons(MessageDialogButtons::OkCancelCustom("Yes", "No"))
+    ///       .show(|yes| {
+    ///         println!("user said {}", if yes { "yes" } else { "no" });
+    ///       });
+    ///     Ok(())
+    ///   });
+    /// ```
+    ///
+    /// - Message dialog with OK button:
+    ///
+    /// ```
+    /// use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+    ///
+    /// tauri::Builder::default()
+    ///   .setup(|app| {
+    ///     app.dialog()
+    ///       .message("Job completed successfully")
+    ///       .buttons(MessageDialogButtons::Ok)
+    ///       .show(|_| {
+    ///         println!("dialog closed");
+    ///       });
+    ///     Ok(())
+    ///   });
+    /// ```
+    ///
+    /// # `show` vs `blocking_show`
+    ///
+    /// The dialog builder includes two separate APIs for rendering the dialog: `show` and `blocking_show`.
+    /// The `show` function is asynchronous and takes a closure to be executed when the dialog is closed.
+    /// To block the current thread until the user acted on the dialog, you can use `blocking_show`,
+    /// but note that it cannot be executed on the main thread as it will freeze your application.
+    ///
+    /// ```
+    /// use tauri_plugin_dialog::{DialogExt, MessageDialogButtons};
+    ///
+    /// tauri::Builder::default()
+    ///   .setup(|app| {
+    ///     let handle = app.handle().clone();
+    ///     std::thread::spawn(move || {
+    ///       let yes = handle.dialog()
+    ///         .message("Are you sure?")
+    ///         .buttons(MessageDialogButtons::OkCancelCustom("Yes", "No"))
+    ///         .blocking_show();
+    ///     });
+    ///
+    ///     Ok(())
+    ///   });
+    /// ```
     pub fn message(&self, message: impl Into<String>) -> MessageDialogBuilder<R> {
         MessageDialogBuilder::new(
             self.clone(),
@@ -72,6 +156,7 @@ impl<R: Runtime> Dialog<R> {
         )
     }
 
+    /// Creates a new builder for dialogs that lets the user select file(s) or folder(s).
     pub fn file(&self) -> FileDialogBuilder<R> {
         FileDialogBuilder::new(self.clone())
     }
@@ -114,10 +199,9 @@ pub struct MessageDialogBuilder<R: Runtime> {
     pub(crate) title: String,
     pub(crate) message: String,
     pub(crate) kind: MessageDialogKind,
-    pub(crate) ok_button_label: Option<String>,
-    pub(crate) cancel_button_label: Option<String>,
+    pub(crate) buttons: MessageDialogButtons,
     #[cfg(desktop)]
-    pub(crate) parent: Option<raw_window_handle::RawWindowHandle>,
+    pub(crate) parent: Option<crate::desktop::WindowHandle>,
 }
 
 /// Payload for the message dialog mobile API.
@@ -128,8 +212,8 @@ pub(crate) struct MessageDialogPayload<'a> {
     title: &'a String,
     message: &'a String,
     kind: &'a MessageDialogKind,
-    ok_button_label: &'a Option<String>,
-    cancel_button_label: &'a Option<String>,
+    ok_button_label: Option<&'a str>,
+    cancel_button_label: Option<&'a str>,
 }
 
 // raw window handle :(
@@ -143,8 +227,7 @@ impl<R: Runtime> MessageDialogBuilder<R> {
             title: title.into(),
             message: message.into(),
             kind: Default::default(),
-            ok_button_label: None,
-            cancel_button_label: None,
+            buttons: Default::default(),
             #[cfg(desktop)]
             parent: None,
         }
@@ -152,12 +235,21 @@ impl<R: Runtime> MessageDialogBuilder<R> {
 
     #[cfg(mobile)]
     pub(crate) fn payload(&self) -> MessageDialogPayload<'_> {
+        let (ok_button_label, cancel_button_label) = match &self.buttons {
+            MessageDialogButtons::Ok => (Some(OK), None),
+            MessageDialogButtons::OkCancel => (Some(OK), Some(CANCEL)),
+            MessageDialogButtons::YesNo => (Some(YES), Some(NO)),
+            MessageDialogButtons::OkCustom(ok) => (Some(ok.as_str()), Some(CANCEL)),
+            MessageDialogButtons::OkCancelCustom(ok, cancel) => {
+                (Some(ok.as_str()), Some(cancel.as_str()))
+            }
+        };
         MessageDialogPayload {
             title: &self.title,
             message: &self.message,
             kind: &self.kind,
-            ok_button_label: &self.ok_button_label,
-            cancel_button_label: &self.cancel_button_label,
+            ok_button_label,
+            cancel_button_label,
         }
     }
 
@@ -168,27 +260,25 @@ impl<R: Runtime> MessageDialogBuilder<R> {
     }
 
     /// Set parent windows explicitly (optional)
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **Linux:** Unsupported.
     #[cfg(desktop)]
-    pub fn parent<W: raw_window_handle::HasWindowHandle>(mut self, parent: &W) -> Self {
-        if let Ok(h) = parent.window_handle() {
-            self.parent.replace(h.as_raw());
+    pub fn parent<W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle>(
+        mut self,
+        parent: &W,
+    ) -> Self {
+        if let (Ok(window_handle), Ok(display_handle)) =
+            (parent.window_handle(), parent.display_handle())
+        {
+            self.parent.replace(crate::desktop::WindowHandle::new(
+                window_handle.as_raw(),
+                display_handle.as_raw(),
+            ));
         }
         self
     }
 
-    /// Sets the label for the OK button.
-    pub fn ok_button_label(mut self, label: impl Into<String>) -> Self {
-        self.ok_button_label.replace(label.into());
-        self
-    }
-
-    /// Sets the label for the Cancel button.
-    pub fn cancel_button_label(mut self, label: impl Into<String>) -> Self {
-        self.cancel_button_label.replace(label.into());
+    /// Sets the dialog buttons.
+    pub fn buttons(mut self, buttons: MessageDialogButtons) -> Self {
+        self.buttons = buttons;
         self
     }
 
@@ -213,40 +303,6 @@ impl<R: Runtime> MessageDialogBuilder<R> {
         blocking_fn!(self, show)
     }
 }
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct FileResponse {
-    pub base64_data: Option<String>,
-    pub duration: Option<u64>,
-    pub height: Option<usize>,
-    pub width: Option<usize>,
-    pub mime_type: Option<String>,
-    pub modified_at: Option<u64>,
-    pub name: Option<String>,
-    pub path: PathBuf,
-    pub size: u64,
-}
-
-impl FileResponse {
-    #[cfg(desktop)]
-    fn new(path: PathBuf) -> Self {
-        let metadata = fs::metadata(&path);
-        let metadata = metadata.as_ref();
-        Self {
-            base64_data: None,
-            duration: None,
-            height: None,
-            width: None,
-            mime_type: None,
-            modified_at: metadata.ok().and_then(|m| to_msec(m.modified())),
-            name: path.file_name().map(|f| f.to_string_lossy().into_owned()),
-            path,
-            size: metadata.map(|m| m.len()).unwrap_or(0),
-        }
-    }
-}
-
 #[derive(Debug, Serialize)]
 pub(crate) struct Filter {
     pub name: String,
@@ -266,13 +322,14 @@ pub struct FileDialogBuilder<R: Runtime> {
     pub(crate) title: Option<String>,
     pub(crate) can_create_directories: Option<bool>,
     #[cfg(desktop)]
-    pub(crate) parent: Option<raw_window_handle::RawWindowHandle>,
+    pub(crate) parent: Option<crate::desktop::WindowHandle>,
 }
 
 #[cfg(mobile)]
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct FileDialogPayload<'a> {
+    file_name: &'a Option<String>,
     filters: &'a Vec<Filter>,
     multiple: bool,
 }
@@ -298,6 +355,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     #[cfg(mobile)]
     pub(crate) fn payload(&self, multiple: bool) -> FileDialogPayload<'_> {
         FileDialogPayload {
+            file_name: &self.file_name,
             filters: &self.filters,
             multiple,
         }
@@ -330,9 +388,19 @@ impl<R: Runtime> FileDialogBuilder<R> {
     /// Sets the parent window of the dialog.
     #[cfg(desktop)]
     #[must_use]
-    pub fn set_parent<W: raw_window_handle::HasWindowHandle>(mut self, parent: &W) -> Self {
-        if let Ok(h) = parent.window_handle() {
-            self.parent.replace(h.as_raw());
+    pub fn set_parent<
+        W: raw_window_handle::HasWindowHandle + raw_window_handle::HasDisplayHandle,
+    >(
+        mut self,
+        parent: &W,
+    ) -> Self {
+        if let (Ok(window_handle), Ok(display_handle)) =
+            (parent.window_handle(), parent.display_handle())
+        {
+            self.parent.replace(crate::desktop::WindowHandle::new(
+                window_handle.as_raw(),
+                display_handle.as_raw(),
+            ));
         }
         self
     }
@@ -358,21 +426,18 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// tauri::Builder::default()
-    ///   .build(tauri::generate_context!("test/tauri.conf.json"))
-    ///   .expect("failed to build tauri app")
-    ///   .run(|app, _event| {
+    ///   .setup(|app| {
     ///     app.dialog().file().pick_file(|file_path| {
     ///       // do something with the optional file path here
     ///       // the file path is `None` if the user closed the dialog
-    ///     })
-    ///   })
+    ///     });
+    ///     Ok(())
+    ///   });
     /// ```
-    pub fn pick_file<F: FnOnce(Option<FileResponse>) + Send + 'static>(self, f: F) {
-        #[cfg(desktop)]
-        let f = |path: Option<PathBuf>| f(path.map(FileResponse::new));
+    pub fn pick_file<F: FnOnce(Option<FilePath>) + Send + 'static>(self, f: F) {
         pick_file(self, f)
     }
 
@@ -380,29 +445,44 @@ impl<R: Runtime> FileDialogBuilder<R> {
     /// This is not a blocking operation,
     /// and should be used when running on the main thread to avoid deadlocks with the event loop.
     ///
+    /// # Reading the files
+    ///
+    /// The file paths cannot be read directly on Android as they are behind a content URI.
+    /// The recommended way to read the files is using the [`fs`](https://v2.tauri.app/plugin/file-system/) plugin:
+    ///
+    /// ```
+    /// use tauri_plugin_dialog::DialogExt;
+    /// use tauri_plugin_fs::FsExt;
+    /// tauri::Builder::default()
+    ///   .setup(|app| {
+    ///     let handle = app.handle().clone();
+    ///     app.dialog().file().pick_file(move |file_path| {
+    ///       let Some(path) = file_path else { return };
+    ///       let Ok(contents) = handle.fs().read_to_string(path) else {
+    ///         eprintln!("failed to read file, <todo add error handling!>");
+    ///         return;
+    ///       };
+    ///     });
+    ///     Ok(())
+    ///   });
+    /// ```
+    ///
+    /// See <https://developer.android.com/guide/topics/providers/content-provider-basics> for more information.
+    ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// tauri::Builder::default()
-    ///   .build(tauri::generate_context!("test/tauri.conf.json"))
-    ///   .expect("failed to build tauri app")
-    ///   .run(|app, _event| {
+    ///   .setup(|app| {
     ///     app.dialog().file().pick_files(|file_paths| {
     ///       // do something with the optional file paths here
     ///       // the file paths value is `None` if the user closed the dialog
-    ///     })
-    ///   })
+    ///     });
+    ///     Ok(())
+    ///   });
     /// ```
-    pub fn pick_files<F: FnOnce(Option<Vec<FileResponse>>) + Send + 'static>(self, f: F) {
-        #[cfg(desktop)]
-        let f = |paths: Option<Vec<PathBuf>>| {
-            f(paths.map(|p| {
-                p.into_iter()
-                    .map(FileResponse::new)
-                    .collect::<Vec<FileResponse>>()
-            }))
-        };
+    pub fn pick_files<F: FnOnce(Option<Vec<FilePath>>) + Send + 'static>(self, f: F) {
         pick_files(self, f)
     }
 
@@ -412,20 +492,19 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// tauri::Builder::default()
-    ///   .build(tauri::generate_context!("test/tauri.conf.json"))
-    ///   .expect("failed to build tauri app")
-    ///   .run(|app, _event| {
+    ///   .setup(|app| {
     ///     app.dialog().file().pick_folder(|folder_path| {
     ///       // do something with the optional folder path here
     ///       // the folder path is `None` if the user closed the dialog
-    ///     })
-    ///   })
+    ///     });
+    ///     Ok(())
+    ///   });
     /// ```
     #[cfg(desktop)]
-    pub fn pick_folder<F: FnOnce(Option<PathBuf>) + Send + 'static>(self, f: F) {
+    pub fn pick_folder<F: FnOnce(Option<FilePath>) + Send + 'static>(self, f: F) {
         pick_folder(self, f)
     }
 
@@ -435,20 +514,19 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// tauri::Builder::default()
-    ///   .build(tauri::generate_context!("test/tauri.conf.json"))
-    ///   .expect("failed to build tauri app")
-    ///   .run(|app, _event| {
+    ///   .setup(|app| {
     ///     app.dialog().file().pick_folders(|file_paths| {
     ///       // do something with the optional folder paths here
     ///       // the folder paths value is `None` if the user closed the dialog
-    ///     })
-    ///   })
+    ///     });
+    ///     Ok(())
+    ///   });
     /// ```
     #[cfg(desktop)]
-    pub fn pick_folders<F: FnOnce(Option<Vec<PathBuf>>) + Send + 'static>(self, f: F) {
+    pub fn pick_folders<F: FnOnce(Option<Vec<FilePath>>) + Send + 'static>(self, f: F) {
         pick_folders(self, f)
     }
 
@@ -459,20 +537,18 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// tauri::Builder::default()
-    ///   .build(tauri::generate_context!("test/tauri.conf.json"))
-    ///   .expect("failed to build tauri app")
-    ///   .run(|app, _event| {
+    ///   .setup(|app| {
     ///     app.dialog().file().save_file(|file_path| {
     ///       // do something with the optional file path here
     ///       // the file path is `None` if the user closed the dialog
-    ///     })
-    ///   })
+    ///     });
+    ///     Ok(())
+    ///   });
     /// ```
-    #[cfg(desktop)]
-    pub fn save_file<F: FnOnce(Option<PathBuf>) + Send + 'static>(self, f: F) {
+    pub fn save_file<F: FnOnce(Option<FilePath>) + Send + 'static>(self, f: F) {
         save_file(self, f)
     }
 }
@@ -485,7 +561,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// #[tauri::command]
     /// async fn my_command(app: tauri::AppHandle) {
@@ -494,7 +570,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///   // the file path is `None` if the user closed the dialog
     /// }
     /// ```
-    pub fn blocking_pick_file(self) -> Option<FileResponse> {
+    pub fn blocking_pick_file(self) -> Option<FilePath> {
         blocking_fn!(self, pick_file)
     }
 
@@ -504,7 +580,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// #[tauri::command]
     /// async fn my_command(app: tauri::AppHandle) {
@@ -513,7 +589,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///   // the file paths value is `None` if the user closed the dialog
     /// }
     /// ```
-    pub fn blocking_pick_files(self) -> Option<Vec<FileResponse>> {
+    pub fn blocking_pick_files(self) -> Option<Vec<FilePath>> {
         blocking_fn!(self, pick_files)
     }
 
@@ -523,7 +599,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// #[tauri::command]
     /// async fn my_command(app: tauri::AppHandle) {
@@ -533,7 +609,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     /// }
     /// ```
     #[cfg(desktop)]
-    pub fn blocking_pick_folder(self) -> Option<PathBuf> {
+    pub fn blocking_pick_folder(self) -> Option<FilePath> {
         blocking_fn!(self, pick_folder)
     }
 
@@ -543,7 +619,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// #[tauri::command]
     /// async fn my_command(app: tauri::AppHandle) {
@@ -553,7 +629,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     /// }
     /// ```
     #[cfg(desktop)]
-    pub fn blocking_pick_folders(self) -> Option<Vec<PathBuf>> {
+    pub fn blocking_pick_folders(self) -> Option<Vec<FilePath>> {
         blocking_fn!(self, pick_folders)
     }
 
@@ -563,7 +639,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///
     /// # Examples
     ///
-    /// ```rust,no_run
+    /// ```
     /// use tauri_plugin_dialog::DialogExt;
     /// #[tauri::command]
     /// async fn my_command(app: tauri::AppHandle) {
@@ -572,23 +648,7 @@ impl<R: Runtime> FileDialogBuilder<R> {
     ///   // the file path is `None` if the user closed the dialog
     /// }
     /// ```
-    #[cfg(desktop)]
-    pub fn blocking_save_file(self) -> Option<PathBuf> {
+    pub fn blocking_save_file(self) -> Option<FilePath> {
         blocking_fn!(self, save_file)
-    }
-}
-
-// taken from deno source code: https://github.com/denoland/deno/blob/ffffa2f7c44bd26aec5ae1957e0534487d099f48/runtime/ops/fs.rs#L913
-#[inline]
-fn to_msec(maybe_time: std::result::Result<std::time::SystemTime, std::io::Error>) -> Option<u64> {
-    match maybe_time {
-        Ok(time) => {
-            let msec = time
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|t| t.as_millis() as u64)
-                .unwrap_or_else(|err| err.duration().as_millis() as u64);
-            Some(msec)
-        }
-        Err(_) => None,
     }
 }

@@ -1,5 +1,124 @@
 # Changelog
 
+## \[2.0.3]
+
+### Dependencies
+
+- Upgraded to `fs@2.0.3`
+
+## \[2.0.1]
+
+- [`2302c2db`](https://github.com/tauri-apps/plugins-workspace/commit/2302c2db1c49673e61dcbda8cdb01b2c57e9ba6f) ([#1910](https://github.com/tauri-apps/plugins-workspace/pull/1910) by [@Legend-Master](https://github.com/tauri-apps/plugins-workspace/../../Legend-Master)) Fix `ask` and `confirm` not using system button texts
+- [`aee14ed4`](https://github.com/tauri-apps/plugins-workspace/commit/aee14ed4261cdedc4ed7cc2686f01f437859a5c7) ([#1892](https://github.com/tauri-apps/plugins-workspace/pull/1892) by [@nashaofu](https://github.com/tauri-apps/plugins-workspace/../../nashaofu)) Set `save` dialog mime type from the `filters` extensions on Android.
+
+## \[2.0.1]
+
+- [`a1a82208`](https://github.com/tauri-apps/plugins-workspace/commit/a1a82208ed4ab87f83310be0dc95428aec9ab241) ([#1873](https://github.com/tauri-apps/plugins-workspace/pull/1873) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) Downgrade MSRV to 1.77.2 to support Windows 7.
+
+### Dependencies
+
+- Upgraded to `fs@2.0.1`
+
+## \[2.0.0]
+
+- [`e2c4dfb6`](https://github.com/tauri-apps/plugins-workspace/commit/e2c4dfb6af43e5dd8d9ceba232c315f5febd55c1) Update to tauri v2 stable release.
+
+### Dependencies
+
+- Upgraded to `fs@2.0.0`
+
+## \[2.0.0-rc.8]
+
+- [`6bf1bd8d`](https://github.com/tauri-apps/plugins-workspace/commit/6bf1bd8d44bb95618590aa066e638509b014e0f9) ([#1805](https://github.com/tauri-apps/plugins-workspace/pull/1805) by [@renovate](https://github.com/tauri-apps/plugins-workspace/../../renovate)) Update rfd to 0.15
+
+### Dependencies
+
+- Upgraded to `fs@2.0.0-rc.6`
+
+### breaking
+
+- [`04459afb`](https://github.com/tauri-apps/plugins-workspace/commit/04459afbb67aafa5cd57e6a148c2beb0a8d3e04a) ([#1842](https://github.com/tauri-apps/plugins-workspace/pull/1842) by [@Legend-Master](https://github.com/tauri-apps/plugins-workspace/../../Legend-Master)) Changed `MessageDialogBuilder::ok_button_label` and `MessageDialogBuilder::cancel_button_label` to `MessageDialogBuilder::buttons` which takes an enum now
+
+## \[2.0.0-rc.7]
+
+### Dependencies
+
+- Upgraded to `fs@2.0.0-rc.5`
+
+## \[2.0.0-rc.6]
+
+- [`2b898f07`](https://github.com/tauri-apps/plugins-workspace/commit/2b898f078688c57309ca17962bf02e665c406514) ([#1769](https://github.com/tauri-apps/plugins-workspace/pull/1769) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) Update Tauri scopes (asset protocol) when using the `open()` command to select directories.
+
+### Dependencies
+
+- Upgraded to `fs@2.0.0-rc.4`
+
+## \[2.0.0-rc.5]
+
+- [`a2fe5551`](https://github.com/tauri-apps/plugins-workspace/commit/a2fe55512f908dd11c814ce021d164f01677572a) ([#1727](https://github.com/tauri-apps/plugins-workspace/pull/1727) by [@amrbashir](https://github.com/tauri-apps/plugins-workspace/../../amrbashir)) Add utility methods on `FilePath` and `SafeFilePath` enums which are:
+
+  - `path`
+  - `simplified`
+  - `into_path`
+- [`a2fe5551`](https://github.com/tauri-apps/plugins-workspace/commit/a2fe55512f908dd11c814ce021d164f01677572a) ([#1727](https://github.com/tauri-apps/plugins-workspace/pull/1727) by [@amrbashir](https://github.com/tauri-apps/plugins-workspace/../../amrbashir)) Implement `Serialize`, `Deserialize`, `From`, `TryFrom` and `FromStr` traits for `FilePath` and `SafeFilePath` enums.
+- [`a2fe5551`](https://github.com/tauri-apps/plugins-workspace/commit/a2fe55512f908dd11c814ce021d164f01677572a) ([#1727](https://github.com/tauri-apps/plugins-workspace/pull/1727) by [@amrbashir](https://github.com/tauri-apps/plugins-workspace/../../amrbashir)) Mark `Error` enum as `#[non_exhuastive]`.
+- [`a2fe5551`](https://github.com/tauri-apps/plugins-workspace/commit/a2fe55512f908dd11c814ce021d164f01677572a) ([#1727](https://github.com/tauri-apps/plugins-workspace/pull/1727) by [@amrbashir](https://github.com/tauri-apps/plugins-workspace/../../amrbashir)) Add `SafeFilePath` enum.
+
+### Dependencies
+
+- Upgraded to `fs@2.0.0-rc.3`
+
+## \[2.0.0-rc.4]
+
+### Dependencies
+
+- Upgraded to `fs@2.0.0-rc.2`
+
+### breaking
+
+- [`0cb99bda`](https://github.com/tauri-apps/plugins-workspace/commit/0cb99bdaf11b5a9bb66b80bdf40b085d87c3066d) ([#1706](https://github.com/tauri-apps/plugins-workspace/pull/1706) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) If no filters are specified, the file picker dialog now defaults to a file selection instead of photos.
+
+### feat
+
+- [`feb1e93f`](https://github.com/tauri-apps/plugins-workspace/commit/feb1e93fcb9a913c002daa29e3b709f24b97c664) ([#1707](https://github.com/tauri-apps/plugins-workspace/pull/1707) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) Implement `save` API on iOS.
+
+## \[2.0.0-rc.1]
+
+- [`448846b8`](https://github.com/tauri-apps/plugins-workspace/commit/448846b834d23df6e7c5dc66c5dd9aa0cb01846d) ([#1658](https://github.com/tauri-apps/plugins-workspace/pull/1658) by [@mikoto2000](https://github.com/tauri-apps/plugins-workspace/../../mikoto2000)) The `open` function now returns a string representing either the file path or URI instead of an object.
+  To read the file data, use the `fs` APIs.
+- [`e2e97db5`](https://github.com/tauri-apps/plugins-workspace/commit/e2e97db51983267f5be84d4f6f0278d58834d1f5) ([#1701](https://github.com/tauri-apps/plugins-workspace/pull/1701) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) Update to tauri 2.0.0-rc.8
+
+## \[2.0.0-rc.2]
+
+- [`b9147758`](https://github.com/tauri-apps/plugins-workspace/commit/b914775898c2bee7ceb20bd17ee595005cd17a64) ([#1679](https://github.com/tauri-apps/plugins-workspace/pull/1679) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) Explicitly set a minimum macOS version for the Swift package.
+
+## \[2.0.0-rc.1]
+
+### feat
+
+- [`bc7eecf4`](https://github.com/tauri-apps/plugins-workspace/commit/bc7eecf4202e7d23b987440c1cbd2da0f68c8bef) ([#1657](https://github.com/tauri-apps/plugins-workspace/pull/1657) by [@mikoto2000](https://github.com/tauri-apps/plugins-workspace/../../mikoto2000)) Implement `save` API on Android.
+
+### changes
+
+- [`6b079cfd`](https://github.com/tauri-apps/plugins-workspace/commit/6b079cfdd107c94abc2c7300f6af00bac3ff4040) ([#1649](https://github.com/tauri-apps/plugins-workspace/pull/1649) by [@ahqsoftwares](https://github.com/tauri-apps/plugins-workspace/../../ahqsoftwares)) Remove targetSdk from build.kts files as it is deprecated and will be removed from DSL v9.0
+
+## \[2.0.0-rc.0]
+
+- [`9887d1`](https://github.com/tauri-apps/plugins-workspace/commit/9887d14bd0e971c4c0f5c1188fc4005d3fc2e29e) Update to tauri RC.
+
+## \[2.0.0-beta.8]
+
+- [`99d6ac0f`](https://github.com/tauri-apps/plugins-workspace/commit/99d6ac0f9506a6a4a1aa59c728157190a7441af6) ([#1606](https://github.com/tauri-apps/plugins-workspace/pull/1606) by [@FabianLars](https://github.com/tauri-apps/plugins-workspace/../../FabianLars)) The JS packages now specify the *minimum* `@tauri-apps/api` version instead of a single exact version.
+- [`6de87966`](https://github.com/tauri-apps/plugins-workspace/commit/6de87966ecc00ad9d91c25be452f1f46bd2b7e1f) ([#1597](https://github.com/tauri-apps/plugins-workspace/pull/1597) by [@Legend-Master](https://github.com/tauri-apps/plugins-workspace/../../Legend-Master)) Update to tauri beta.25.
+
+## \[2.0.0-beta.7]
+
+- [`22a17980`](https://github.com/tauri-apps/plugins-workspace/commit/22a17980ff4f6f8c40adb1b8f4ffc6dae2fe7e30) ([#1537](https://github.com/tauri-apps/plugins-workspace/pull/1537) by [@lucasfernog](https://github.com/tauri-apps/plugins-workspace/../../lucasfernog)) Update to tauri beta.24.
+
+## \[2.0.0-beta.6]
+
+- [`76daee7a`](https://github.com/tauri-apps/plugins-workspace/commit/76daee7aafece34de3092c86e531cf9eb1138989) ([#1512](https://github.com/tauri-apps/plugins-workspace/pull/1512) by [@renovate](https://github.com/tauri-apps/plugins-workspace/../../renovate)) Update to tauri beta.23.
+
 ## \[2.0.0-beta.5]
 
 - [`9013854f`](https://github.com/tauri-apps/plugins-workspace/commit/9013854f42a49a230b9dbb9d02774765528a923f)([#1382](https://github.com/tauri-apps/plugins-workspace/pull/1382)) Update to tauri beta.22.
@@ -153,5 +272,32 @@
   pull/371)) First v2 alpha release!
   lpha release!
   pull/371)) First v2 alpha release!
-lpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lpha release!
+  pull/371)) First v2 alpha release!
+  lease!
   pull/371)) First v2 alpha release!
